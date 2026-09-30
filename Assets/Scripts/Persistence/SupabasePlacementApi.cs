@@ -6,11 +6,38 @@ using UnityEngine.Networking;
 
 //Talks to Supabase: image files go to Storage, placement rows go to the "placements" table via its REST API.
 //The anon key is safe to ship in the app; access is controlled by the row level security policies in Backend/supabase_schema.sql.
+//The URL and key are read from Assets/Resources/SupabaseConfig.json (gitignored) so they stay out of the repo.
+//Copy Backend/SupabaseConfig.example.json there to set it up.
 public class SupabasePlacementApi : MonoBehaviour
 {
 	public string supabaseUrl = "https://YOUR-PROJECT.supabase.co";
 	public string anonKey = ""; // Publishable key (sb_publishable_...) or legacy anon key. Never the secret/service_role key
 	public string imageBucket = "placement-images";
+
+	private const string ConfigResource = "SupabaseConfig";
+
+	[Serializable]
+	private class SupabaseConfig
+	{
+		public string supabaseUrl;
+		public string anonKey;
+	}
+
+	void Awake()
+	{
+		TextAsset configFile = Resources.Load<TextAsset>(ConfigResource);
+		if (configFile == null)
+		{
+			Debug.LogWarning("SupabasePlacementApi: Resources/" + ConfigResource + ".json not found; using Inspector values. See Backend/SupabaseConfig.example.json");
+			return;
+		}
+
+		SupabaseConfig config = JsonUtility.FromJson<SupabaseConfig>(configFile.text);
+		if (!string.IsNullOrEmpty(config.supabaseUrl))
+			supabaseUrl = config.supabaseUrl;
+		if (!string.IsNullOrEmpty(config.anonKey))
+			anonKey = config.anonKey;
+	}
 
 	[Serializable]
 	private class NearbyQuery

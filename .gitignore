@@ -21,3 +21,7 @@
 
 .DS_Store
 /Supabase PErsonal Org PAssword.txt
+# Local secrets (see CLAUDE.md "Secrets and security")
+/Assets/Resources/SupabaseConfig.json
+/Assets/Resources/SupabaseConfig.json.meta
+/ProjectSettings/ARCoreExtensionsProjectSettings.json

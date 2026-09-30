@@ -311,8 +311,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d81e7777a6a24b138f60a0a77f23838, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SupabasePlacementApi
-  supabaseUrl: https://jirvadkpwrtzdhodupqe.supabase.co
-  anonKey: sb_publishable_Z-eXcEccUPIecmX3Sqjz9g_-HE0ivI-
+  supabaseUrl: https://YOUR-PROJECT.supabase.co
+  anonKey: 
   imageBucket: placement-images
 --- !u!114 &119520217
 MonoBehaviour:
