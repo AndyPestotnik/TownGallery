@@ -1,0 +1,53 @@
+CAPSTONE NEXT STEPS
+======================
+
+I've written the Unity side of cloud-anchor saving and loading, but none of it has been compiled or run. [CloudAnchorPlacementManager.cs](Assets/Scripts/Persistence/CloudAnchorPlacementManager.cs) uses the ARCore Extensions package, which isn't installed yet. Until you install it, the whole project won't compile. Once it's in, some ARCore names (promise and result types) may need small fixes; I wrote them from memory of Google's API.
+
+## What happens now
+
+**Saving** (after you tap OK):
+1. The image is anchored as before.
+2. The app waits until ARCore has seen enough of the area; the user is asked to move the phone slowly around the image, for up to 30 s.
+3. It hosts the cloud anchor, reads GPS and compass, uploads the image as a PNG, and inserts a database row.
+
+**Loading** (at app start):
+1. Once AR tracking and GPS are ready, it asks the database for images within 50 m that haven't expired.
+2. For each one, it downloads the image and resolves the cloud anchor.
+3. An image appears once the user points the camera at the spot where it was saved.
+
+## New and changed files
+- [ImageQuadUtil.cs](Assets/Scripts/ImageQuadUtil.cs): the material setup, moved out of `Add_Image` so saved and loaded images look the same.
+- [LocationProvider.cs](Assets/Scripts/Persistence/LocationProvider.cs): starts GPS and compass.
+- [PlacementRecord.cs](Assets/Scripts/Persistence/PlacementRecord.cs): one saved image. The position, rotation and scale are relative to the anchor.
+- [SupabasePlacementApi.cs](Assets/Scripts/Persistence/SupabasePlacementApi.cs): image upload, row insert, nearby query and image download.
+- [CloudAnchorPlacementManager.cs](Assets/Scripts/Persistence/CloudAnchorPlacementManager.cs): hosts and resolves the anchors, and ties the steps above together.
+- [Backend/supabase_schema.sql](Backend/supabase_schema.sql): the table, the nearby-search function and the storage bucket.
+- [Add_Image.cs](Assets/Scripts/Add_Image.cs): calls `SavePlacement` on OK. I also moved its missing-texture check to run before the texture is used; before, the check came too late to prevent a crash.
+
+## Setup you need to do
+
+**Google Cloud**
+1. Create a project and enable the **ARCore API**.
+2. Create an **API key**, restricted to the ARCore API.
+
+**Unity**
+1. Install **ARCore Extensions** from Package Manager → Add package from git URL: `https://github.com/google-ar/arcore-unity-extensions.git`. Use a release that supports AR Foundation 6. It also needs External Dependency Manager; follow Google's install guide for that part.
+2. In **Project Settings → XR Plug-in Management → ARCore Extensions**: turn on iOS support, set Cloud Anchors authentication to **API Key**, and paste the key.
+3. Create an ARCore Extensions config asset with **Cloud Anchor Mode = Enabled**.
+4. In the scene, add an **ARCoreExtensions** GameObject and assign the ARSession, XR Origin, camera manager and that config.
+5. Add an `ARAnchorManager` to the XR Origin if it doesn't already have one.
+6. Create a GameObject with `LocationProvider`, `SupabasePlacementApi` and `CloudAnchorPlacementManager`. Fill in the Supabase URL and anon key, then assign the anchor manager, the `double_image_quad` prefab and, optionally, a UI Text for status messages.
+7. Drag that manager into the new **Placement Manager** slot on `Add_Image`.
+8. In **Player Settings → iOS**, fill in **Location Usage Description**. Without it, iOS won't grant location access.
+9. When you build, open the generated **.xcworkspace**, not the .xcodeproj, because ARCore on iOS installs through CocoaPods.
+
+**Supabase**
+1. Create a project and run `supabase_schema.sql` in its SQL editor.
+2. The access rules in that file let anyone read, insert and upload, which is fine for development only. Tighten them once you add sign-in.
+
+## Things to know
+- **Anchors expire after 1 day.** API-key sign-in limits cloud anchors to 24 hours, and the nearby search hides expired rows. Keeping them up to 365 days needs signed-token auth, which on iOS means a small backend that issues tokens. Put that on the list for later.
+- **Resolving needs the same view.** A saved image only reappears when the user points the camera at the area where it was saved, under similar lighting. Big lighting changes (day vs. night) can prevent resolving.
+- **Textured areas save better.** Hosting fails in the same low-detail spots that caused drift, like blank walls. The "move your phone around" step is there to prevent that.
+
+My suggested first test is to save one image, delete and reinstall the app, and relaunch in the same spot to check it reappears.
